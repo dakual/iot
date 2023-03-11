@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import json
 from flask import Flask, render_template
 from flask_sock import Sock
 from datetime import datetime
 from seismic import Seismograph
 from tcpdump import TCP
-
+import json
 
 app  = Flask(__name__)
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}

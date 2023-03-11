@@ -30,9 +30,13 @@ logger.setLevel(logging.INFO)
 
 
 class Seismograph(threading.Thread):
-  samples = 1000
-  avarage = 0
-  sensorValue = 0
+  calibrationSampleSize = 1000
+  calibrationAvarage = 0
+  
+  alarmThreshold = 50
+  alarmPercentage = 1
+  alarmSampleSize = 200
+  alarmState = 0
 
   def __init__(self):
     threading.Thread.__init__(self)
@@ -44,43 +48,37 @@ class Seismograph(threading.Thread):
     self.mpu.accel_config()
     self.calibrate()
 
-
   def run(self):
-    alarm_threshold = 30
-    avg_percentage  = 1
-    sample_size     = 100
-    
     logger.info("Sensor started.")
 
     samples = []
     counter = 0
     while True:
-      self.sensorValue = self.getData()
-      sensorLogger.info(self.sensorValue)
-      samples.append(self.sensorValue)
+      sensorValue = self.getData()
+      sensorLogger.info(sensorValue)
 
-      minVal = self.avarage - round((self.avarage * avg_percentage) / 100)
-      maxVal = self.avarage + round((self.avarage * avg_percentage) / 100)
-      counter += 1 if self.sensorValue < minVal or self.sensorValue > maxVal else 0
-
-      if len(samples) >= sample_size:
-        if(counter >= alarm_threshold):
-          logger.warning("Sensor Alarm!!!")
+      minVal = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
+      maxVal = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
+      counter += 1 if sensorValue < minVal or sensorValue > maxVal else 0
+      
+      samples.append(sensorValue)
+      if len(samples) >= self.alarmSampleSize:
+        if(counter >= self.alarmThreshold):
+          self.alarm(1)
+        else:
+          if self.alarmState == 1: self.alarm(0)
 
         samples = []
         counter = 0
 
-  def getValue(self):
-    return self.sensorValue
-
   def calibrate(self):
     logger.info("Sensor calibrating...")
 
-    for num in range(0, self.samples):
-      self.avarage += self.getData()
-    self.avarage /= self.samples
+    for num in range(0, self.calibrationSampleSize):
+      self.calibrationAvarage += self.getData()
+    self.calibrationAvarage /= self.calibrationSampleSize
 
-    return self.avarage
+    return self.calibrationAvarage
 
   def getData(self):
     acc = self.mpu.read_accelerometer(gravity=True)
@@ -94,3 +92,8 @@ class Seismograph(threading.Thread):
     sleep(0.01)
 
     return total
+  
+  def alarm(self, state):
+    self.alarmState = state
+    logState = "active" if state == 1 else "inactive"
+    logger.warning(f"Alarm ({logState})")
