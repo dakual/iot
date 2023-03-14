@@ -13,6 +13,7 @@ import gc
 import os
 import ntptime
 import time
+import utils
 
 
 tm = Timer(0)
@@ -29,9 +30,9 @@ def initWIFI():
 
   print('Connected. IP Address:', wlan.ifconfig()[0])
   led = Pin(33, Pin.OUT)
-  led.on()
 
 def initRTC():
+  print('Synchronizing NTP data time')
   UTC_OFFSET = 2 * 60 * 60
   rtc = RTC()
   ntptime.settime()
@@ -40,16 +41,17 @@ def initRTC():
       ntptime.time() + UTC_OFFSET
     )
   )
+  print(utils.get_datetime())
 
 def initSD():
   print('Mounting SD card')
   try:
-    sd = SDCard()
-    os.mount(sd, "/sd")
+    if 'sd' not in os.listdir('/'):
+      sd = SDCard()
+      os.mount(sd, "/sd")
   except:
     return False
   return True
-
 
 
 def rtm(timer, websocket):
