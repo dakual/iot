@@ -4,35 +4,50 @@ from machine import Pin
 from machine import sleep
 from machine import Timer
 from machine import SDCard
+from machine import RTC
 import network
 import random
 import json
 import secrets
 import gc
 import os
+import ntptime
+import time
 
-def initWifi():
-  print('Connecting to WiFi Network Name:', secrets.SSID)
+
+tm = Timer(0)
+
+
+def initWIFI():
   wlan = network.WLAN(network.STA_IF)
   wlan.active(True)
-
   if not wlan.isconnected():
+    print('Connecting to WiFi Network Name:', secrets.SSID)
     wlan.connect(secrets.SSID, secrets.PASSWORD)
     while not wlan.isconnected():
       pass
 
   print('Connected. IP Address:', wlan.ifconfig()[0])
-
   led = Pin(33, Pin.OUT)
   led.on()
 
+def initRTC():
+  UTC_OFFSET = 2 * 60 * 60
+  rtc = RTC()
+  ntptime.settime()
+  rtc.init (
+    time.localtime (
+      ntptime.time() + UTC_OFFSET
+    )
+  )
+
 def initSD():
+  print('Mounting SD card')
   try:
     sd = SDCard()
     os.mount(sd, "/sd")
   except:
     return False
-  
   return True
 
 
@@ -55,9 +70,16 @@ def _closedCallback(webSocket):
   gc.collect()
 
 
-print("Starting server")
-srv = MicroWebSrv(webPath='www/')
-srv.MaxWebSocketRecvLen = 256
-srv.WebSocketThreaded		= True
-srv.AcceptWebSocketCallback = _acceptWebSocketCallback
-srv.Start()
+
+if __name__ == "__main__":
+  print("initializing...")
+  initWIFI()
+  initRTC()
+  initSD()
+
+  print("Starting server")
+  srv = MicroWebSrv(webPath='www/')
+  srv.MaxWebSocketRecvLen = 256
+  srv.WebSocketThreaded		= True
+  srv.AcceptWebSocketCallback = _acceptWebSocketCallback
+  srv.Start()
