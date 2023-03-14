@@ -1,0 +1,2 @@
+SSID = "pss"
+PASSWORD = "Dd154321"
