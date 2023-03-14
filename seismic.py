@@ -44,8 +44,7 @@ class Seismograph(threading.Thread):
     logger.info("Sensor starting...")
     self.mpu = MPU6050(0x68)
     self.mpu.reset()
-    self.mpu.power_manage()
-    self.mpu.accel_config()
+    self.mpu.power_manage(temp_sense_disable=True)
     self.calibrate()
 
   def run(self):
@@ -81,10 +80,10 @@ class Seismograph(threading.Thread):
     return self.calibrationAvarage
 
   def getData(self):
-    acc = self.mpu.read_accelerometer(gravity=True)
-    xValue = acc["x"] + 2
-    yValue = acc["y"] + 2
-    zValue = acc["z"] + 2
+    accVal = self.mpu.read_accelerometer(gravity=True)
+    xValue = accVal["x"] + 2
+    yValue = accVal["y"] + 2
+    zValue = accVal["z"] + 2
 
     total  = xValue * yValue * zValue
     total  = round(total * 10000)
