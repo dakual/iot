@@ -6,9 +6,11 @@ from machine import Pin
 from machine import RTC
 from machine import Timer
 from RotatingLog import RotatingLog
+from telegram import telegram_send
 import gc
 import os
-
+import utils
+import asyncio
 
 class Seismograph():
   calibrationSampleSize = 1000
@@ -17,7 +19,6 @@ class Seismograph():
   alarmPercentage       = 0.7
   alarmSampleSize       = 100
   alarmState            = 0
-  
   
   def __init__(self):
     self.i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
@@ -49,12 +50,12 @@ class Seismograph():
           self.alarmState=1
         else:
           if self.alarmState == 1:
-              self.alarm(0)
-              self.alarmState=0
+            self.alarm(0)
+            self.alarmState=0
               
         samples = 0
         counter = 0
-        #gc.collect()
+        # gc.collect()
     
       sleep(0.01)
 
@@ -79,12 +80,14 @@ class Seismograph():
 
   def alarm(self, state):
     if state == 1:
-        print("Alarm active!")
-        if self.alarmState == 0:
-            self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
+      print("Alarm active!")
+      if self.alarmState == 0:
+        self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
+        asyncio.run(telegram_send("[ALERT] Alarm active!"))
     else:
-        print("Alarm inactive")
-        self.tmr.deinit()    
+      print("Alarm inactive")
+      self.tmr.deinit()
+      asyncio.run(telegram_send("Alarm inactive"))
   
   @staticmethod
   def flashlight():
@@ -94,42 +97,33 @@ class Seismograph():
 
   def sdlogger(self, value):
     y,m,d,_,h,mi,s,_ = self.rtc.datetime()
-    date   = '%d-%d-%d %d:%d:%d' % (y,m,d,h,mi,s)
-    record = f"{date} - {value}"
-    
-    #date = '%d%d%d-%d' % (y,m,d,h) filename = "/sd/seismic.log.{0}".format(backupCount)
-    backupCount = 10
+    datetime = '%d-%d-%d %d:%d:%d' % (y,m,d,h,mi,s)
+    record   = f"{datetime} - {value}"
+    bacCount = 10
     filename = "/sd/seismic.log"
-    filesize = 0
     maxBytes = 5242880
-    
+
     try:
-        filesize = os.stat(filename)[6]
+      filesize = utils.get_filesize(filename)
     except OSError:
-        pass
+      filesize = 0
     
     if filesize > maxBytes:
-        try:
-            os.remove(filename + ".{0}".format(backupCount))
-        except OSError:
-            pass
+      utils.try_remove(filename + ".{0}".format(bacCount))
 
-        for i in range(backupCount - 1, 0, -1):
-            if i < backupCount:
-                try:
-                    os.rename(
-                        filename + ".{0}".format(i),
-                        filename + ".{0}".format(i + 1),
-                    )
-                except OSError:
-                    pass
-
-        try:
-            os.rename(filename, filename + ".1")
-        except OSError:
+      for i in range(bacCount - 1, 0, -1):
+        if i < bacCount:
+          try:
+            os.rename(
+              filename + ".{0}".format(i),
+              filename + ".{0}".format(i + 1),
+            )
+          except OSError:
             pass
+      
+      utils.try_rename(filename, filename + ".1")
 
     with open(filename, "a") as f:
-        f.write(record + "\n")
+      f.write(record + "\n")
 
 

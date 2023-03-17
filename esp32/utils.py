@@ -1,6 +1,4 @@
 import os
-import machine
-import time
 
 def rmdir(d): 
 	try:
@@ -35,12 +33,17 @@ def lsdir(path, tabs=0):
     if isdir:
         lsdir(path + "/" + file, tabs + 1)
 
-def flash_led():
-  led = Pin(4, Pin.OUT)
-  led.on()
-  time.sleep(0.3)
-  led.off()
-  time.sleep(0.1)
-  led.on()
-  time.sleep(0.2)
-  led.off()
+def get_filesize(fn: str) -> int:
+    return os.stat(fn)[6]
+
+def try_remove(fn: str) -> None:
+    try:
+        os.remove(fn)
+    except OSError:
+        pass
+
+def try_rename(fn: str) -> None:
+    try:
+        os.rename(fn)
+    except OSError:
+        pass

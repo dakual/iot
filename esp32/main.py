@@ -1,23 +1,21 @@
 from microWebSrv import MicroWebSrv
 from machine import Pin
-from machine import sleep
 from machine import Timer
 from machine import SDCard
 from machine import RTC
 from machine import idle
 import network
-import random
+import ntptime
 import json
 import secrets
 import gc
 import os
-import ntptime
 import time
-import utils
 import seismic
 
 tmr = Timer(0)
 ses = seismic.Seismograph()
+
 
 def initWIFI():
   wlan = network.WLAN(network.STA_IF)
@@ -47,8 +45,6 @@ def initRTC():
   except:
       print('NTP could not Synchronized!')
       
-
-
 def initSD():
   print('Mounting SD card')
   try:
@@ -60,7 +56,7 @@ def initSD():
 
 def rtm(timer, websocket):
   dict = {} 
-  dict['value'] = ses.getData() # random.randint(5000, 15000)
+  dict['value'] = ses.getData()
   dict['date']  = "2023"
   websocket.SendText(json.dumps(dict))
 
@@ -76,9 +72,6 @@ def _closedCallback(webSocket):
   gc.collect()
 
 
-
-    
-    
 if __name__ == "__main__":
   print("initializing...")
   initWIFI()
