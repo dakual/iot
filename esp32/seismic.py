@@ -4,48 +4,58 @@ from time import sleep
 from machine import I2C
 from machine import Pin
 from machine import RTC
+from machine import Timer
+from RotatingLog import RotatingLog
 import gc
+import os
+
 
 class Seismograph():
   calibrationSampleSize = 1000
   calibrationAvarage    = 0
-  alarmThreshold        = 50
-  alarmPercentage       = 1
-  alarmSampleSize       = 200
+  alarmThreshold        = 30
+  alarmPercentage       = 0.7
+  alarmSampleSize       = 100
   alarmState            = 0
-
+  
+  
   def __init__(self):
     self.i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
     self.mpu = accel(self.i2c)
     self.rtc = RTC()
-    self.led = Pin(4, Pin.OUT, value=0)
+    self.tmr = Timer(1)
+    self.log = RotatingLog("seismic.log", 5242880, 10)
     self.calibrate()
 
   def start(self):
     start_new_thread(self.run, ())
 
   def run(self):
-    samples = []
+    samples = 0
     counter = 0
     while True:
       sensorValue = self.getData()
       self.sdlogger(sensorValue)
-
+      
       minVal = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
       maxVal = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
-      counter += 1 if sensorValue < minVal or sensorValue > maxVal else 0
       
-      samples.append(sensorValue)
-      if len(samples) >= self.alarmSampleSize:
+      counter += 1 if sensorValue < minVal or sensorValue > maxVal else 0
+      samples += 1
+      
+      if samples >= self.alarmSampleSize:
         if(counter >= self.alarmThreshold):
           self.alarm(1)
+          self.alarmState=1
         else:
-          if self.alarmState == 1: self.alarm(0)
-
-        samples = []
+          if self.alarmState == 1:
+              self.alarm(0)
+              self.alarmState=0
+              
+        samples = 0
         counter = 0
+        #gc.collect()
     
-      gc.collect()
       sleep(0.01)
 
   def calibrate(self):
@@ -67,34 +77,59 @@ class Seismograph():
 
     return total
 
-  @staticmethod
-  def startAlarm(func, args=()):
-    try:
-        gc.collect()
-        start_new_thread(func, args)
-        return True
-    except:
-        pass
-
   def alarm(self, state):
-    self.alarmState = state
-    logState = "active" if state == 1 else "inactive"
-    
-    Seismograph.startAlarm(self.flashlight, (state, ))
-    print(f"Alarm ({logState})")
-
-  def flashlight(self, state):
-    self.alarmState = state
-    while self.alarmState == 1:
-      self.led.value(1)
-      sleep(0.3)
-      self.led.value(0)
-      sleep(0.1)
+    if state == 1:
+        print("Alarm active!")
+        if self.alarmState == 0:
+            self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
+    else:
+        print("Alarm inactive")
+        self.tmr.deinit()    
+  
+  @staticmethod
+  def flashlight():
+    led = Pin(4, Pin.OUT, value=1)
+    sleep(0.01)
+    led.value(0)
 
   def sdlogger(self, value):
     y,m,d,_,h,mi,s,_ = self.rtc.datetime()
-    date = '%d%d%d-%d' % (y,m,d,h)
-    file = "/sd/{}-seismic.log".format(date)
-    with open(file, "a") as f:
-      date = '%d-%d-%d %d:%d:%d' % (y,m,d,h,mi,s)
-      f.write(f"{date} - {value}\r\n")
+    date   = '%d-%d-%d %d:%d:%d' % (y,m,d,h,mi,s)
+    record = f"{date} - {value}"
+    
+    #date = '%d%d%d-%d' % (y,m,d,h) filename = "/sd/seismic.log.{0}".format(backupCount)
+    backupCount = 10
+    filename = "/sd/seismic.log"
+    filesize = 0
+    maxBytes = 5242880
+    
+    try:
+        filesize = os.stat(filename)[6]
+    except OSError:
+        pass
+    
+    if filesize > maxBytes:
+        try:
+            os.remove(filename + ".{0}".format(backupCount))
+        except OSError:
+            pass
+
+        for i in range(backupCount - 1, 0, -1):
+            if i < backupCount:
+                try:
+                    os.rename(
+                        filename + ".{0}".format(i),
+                        filename + ".{0}".format(i + 1),
+                    )
+                except OSError:
+                    pass
+
+        try:
+            os.rename(filename, filename + ".1")
+        except OSError:
+            pass
+
+    with open(filename, "a") as f:
+        f.write(record + "\n")
+
+
