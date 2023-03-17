@@ -26,9 +26,9 @@ class accel():
     def get_values(self):
         raw_ints = self.get_raw_values()
         vals = {}
-        vals["x"] = self.bytes_toint(raw_ints[0], raw_ints[1])
-        vals["y"] = self.bytes_toint(raw_ints[2], raw_ints[3])
-        vals["z"] = self.bytes_toint(raw_ints[4], raw_ints[5])
+        vals["x"] = self.bytes_toint(raw_ints[0], raw_ints[1]) / 16384.0
+        vals["y"] = self.bytes_toint(raw_ints[2], raw_ints[3]) / 16384.0
+        vals["z"] = self.bytes_toint(raw_ints[4], raw_ints[5]) / 16384.0
 
         return vals  # returned in range of Int16 -32768 to 32767
 
@@ -48,3 +48,4 @@ class accel():
             v2 = self.get_smoothed_values(n_samples)
             if all(abs(v1[key] - v2[key]) < threshold for key in v1.keys()):
                 return v1  # Calibrated.
+

@@ -1,5 +1,4 @@
 from microWebSrv import MicroWebSrv
-from machine import I2C
 from machine import Pin
 from machine import sleep
 from machine import Timer
@@ -15,13 +14,10 @@ import os
 import ntptime
 import time
 import utils
-import mpu6050
-
+import seismic
 
 tmr = Timer(0)
-i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
-mpu = mpu6050.accel(i2c)
-
+ses = seismic.Seismograph()
 
 def initWIFI():
   wlan = network.WLAN(network.STA_IF)
@@ -36,16 +32,22 @@ def initWIFI():
   led = Pin(33, Pin.OUT)
 
 def initRTC():
-  print('Synchronizing NTP data time')
+  print('Synchronizing NTP date time')
   UTC_OFFSET = 2 * 60 * 60
   rtc = RTC()
-  ntptime.settime()
-  rtc.init (
-    time.localtime (
-      ntptime.time() + UTC_OFFSET
-    )
-  )
-  print(utils.get_datetime())
+  try:
+      time.sleep(0.1)
+      ntptime.settime()
+      
+      rtc.init (
+        time.localtime (
+          ntptime.time() + UTC_OFFSET
+        )
+      )      
+  except:
+      print('NTP could not Synchronized!')
+      
+
 
 def initSD():
   print('Mounting SD card')
@@ -54,24 +56,11 @@ def initSD():
       sd = SDCard()
       os.mount(sd, "/sd")
   except:
-    return False
-  return True
-
-
-def getData():   
-    acc    = mpu.get_values()
-    xValue = acc["x"] + 2
-    yValue = acc["y"] + 2
-    zValue = acc["z"] + 2
-
-    total  = xValue * yValue * zValue
-    total  = round(total * 10000)
-    
-    return total
+    print('SD Card could not mounted!')
 
 def rtm(timer, websocket):
   dict = {} 
-  dict['value'] = getData() # random.randint(5000, 15000)
+  dict['value'] = ses.getData() # random.randint(5000, 15000)
   dict['date']  = "2023"
   websocket.SendText(json.dumps(dict))
 
@@ -96,7 +85,10 @@ if __name__ == "__main__":
   initRTC()
   initSD()
 
-  print("Starting server")
+  print("Starting seismic sensor")
+  ses.start()
+
+  print("Starting web server")
   srv = MicroWebSrv(webPath='www/')
   srv.MaxWebSocketRecvLen = 256
   srv.WebSocketThreaded = True
