@@ -10,7 +10,6 @@ from telegram import telegram_send
 import gc
 import os
 import utils
-import asyncio
 
 class Seismograph():
   calibrationSampleSize = 1000
@@ -25,7 +24,6 @@ class Seismograph():
     self.mpu = accel(self.i2c)
     self.rtc = RTC()
     self.tmr = Timer(1)
-    self.log = RotatingLog("seismic.log", 5242880, 10)
     self.calibrate()
 
   def start(self):
@@ -34,12 +32,13 @@ class Seismograph():
   def run(self):
     samples = 0
     counter = 0
+
+    minVal = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
+    maxVal = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
+    
     while True:
       sensorValue = self.getData()
       self.sdlogger(sensorValue)
-      
-      minVal = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
-      maxVal = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
       
       counter += 1 if sensorValue < minVal or sensorValue > maxVal else 0
       samples += 1
@@ -83,11 +82,11 @@ class Seismograph():
       print("Alarm active!")
       if self.alarmState == 0:
         self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
-        asyncio.run(telegram_send("[ALERT] Alarm active!"))
+        telegram_send("[ALERT] Alarm active!")
     else:
       print("Alarm inactive")
       self.tmr.deinit()
-      asyncio.run(telegram_send("Alarm inactive"))
+      telegram_send("Alarm inactive")
   
   @staticmethod
   def flashlight():
@@ -125,5 +124,5 @@ class Seismograph():
 
     with open(filename, "a") as f:
       f.write(record + "\n")
-
+    gc.collect()
 
