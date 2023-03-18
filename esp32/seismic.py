@@ -3,6 +3,7 @@ from time import sleep
 from machine import Pin
 from machine import Timer
 from machine import RTC
+import telegram
 import os
 import gc
 
@@ -46,7 +47,7 @@ class Seismograph():
         samples = 0
         counter = 0
 
-      # self.logger.emit(value)
+      self.logger.emit(self.value)
       # gc.collect()
       sleep(0.01)
 
@@ -63,9 +64,11 @@ class Seismograph():
       print("Alarm active!")
       if self.alarmState == 0:
         self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
+        # telegram.telegram_send("[ALARM] active")
     else:
       print("Alarm inactive")
       self.tmr.deinit()
+      # telegram.telegram_send("[ALARM] inactive")
   
   @staticmethod
   def flashlight():

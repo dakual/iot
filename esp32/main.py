@@ -6,6 +6,7 @@ from machine import RTC
 from machine import idle
 from machine import I2C
 from seismic import Seismograph
+from seismic import Logger
 from mpu6050 import Accelerator
 import network
 import ntptime
@@ -83,11 +84,6 @@ if __name__ == "__main__":
 
   print("Starting seismic sensor")
   ses.start()
-
-  # if 'sd' in os.listdir('/'):
-  #   print("Starting seismic logger")
-  #   logger = seismic.Logger("/sd/seismic.log", 5242880, 10)
-  #   log.init(period=10, callback=lambda timer: logger.run())
 
   # print("Starting web server")
   # srv = MicroWebSrv(webPath='www/')
