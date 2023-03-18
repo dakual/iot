@@ -1,29 +1,23 @@
-from _thread import start_new_thread, allocate_lock
-from mpu6050 import accel
+from _thread import start_new_thread
 from time import sleep
-from machine import I2C
 from machine import Pin
-from machine import RTC
 from machine import Timer
-from RotatingLog import RotatingLog
-from telegram import telegram_send
-import gc
+from machine import RTC
 import os
-import utils
+import gc
 
 class Seismograph():
   calibrationSampleSize = 1000
   calibrationAvarage    = 0
   alarmThreshold        = 30
-  alarmPercentage       = 0.7
+  alarmPercentage       = 2
   alarmSampleSize       = 100
   alarmState            = 0
   
-  def __init__(self):
-    self.i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
-    self.mpu = accel(self.i2c)
-    self.rtc = RTC()
-    self.tmr = Timer(1)
+  def __init__(self, accelerator):
+    self.tmr    = Timer(1)
+    self.logger = Logger("/sd/seismic.log", 5242880, 10)
+    self.acc    = accelerator
     self.calibrate()
 
   def start(self):
@@ -32,17 +26,14 @@ class Seismograph():
   def run(self):
     samples = 0
     counter = 0
-
-    minVal = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
-    maxVal = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
+    minVal  = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
+    maxVal  = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
     
     while True:
-      sensorValue = self.getData()
-      self.sdlogger(sensorValue)
-      
-      counter += 1 if sensorValue < minVal or sensorValue > maxVal else 0
+      self.value = self.acc.getData()
+      counter += 1 if self.value < minVal or self.value > maxVal else 0
       samples += 1
-      
+
       if samples >= self.alarmSampleSize:
         if(counter >= self.alarmThreshold):
           self.alarm(1)
@@ -54,39 +45,27 @@ class Seismograph():
               
         samples = 0
         counter = 0
-        # gc.collect()
-    
+
+      # self.logger.emit(value)
+      # gc.collect()
       sleep(0.01)
 
   def calibrate(self):
     for num in range(0, self.calibrationSampleSize):
-      self.calibrationAvarage += self.getData()
+      self.calibrationAvarage += self.acc.getData()
       sleep(0.01)
     self.calibrationAvarage /= self.calibrationSampleSize
 
     return self.calibrationAvarage
-
-  def getData(self):
-    accVal = self.mpu.get_values()
-    xValue = accVal["x"] + 2
-    yValue = accVal["y"] + 2
-    zValue = accVal["z"] + 2
-
-    total  = xValue * yValue * zValue
-    total  = round(total * 10000)
-
-    return total
 
   def alarm(self, state):
     if state == 1:
       print("Alarm active!")
       if self.alarmState == 0:
         self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
-        telegram_send("[ALERT] Alarm active!")
     else:
       print("Alarm inactive")
       self.tmr.deinit()
-      telegram_send("Alarm inactive")
   
   @staticmethod
   def flashlight():
@@ -94,35 +73,53 @@ class Seismograph():
     sleep(0.01)
     led.value(0)
 
-  def sdlogger(self, value):
+  def getValue(self):
+    return self.value
+
+
+class Logger():
+
+  def __init__(self, filename, maxBytes=0, backupCount=0):
+    self.rtc          = RTC()
+    self.filename     = filename
+    self.maxBytes     = maxBytes
+    self.backupCount  = backupCount
+    self._counter     = self.get_filesize(self.filename)
+
+  def emit(self, record):
     y,m,d,_,h,mi,s,_ = self.rtc.datetime()
-    datetime = '%d-%d-%d %d:%d:%d' % (y,m,d,h,mi,s)
-    record   = f"{datetime} - {value}"
-    bacCount = 10
-    filename = "/sd/seismic.log"
-    maxBytes = 5242880
+    record   = f"%d-%d-%d %d:%d:%d - {record}" % (y,m,d,h,mi,s)
+    s_len    = len(record)
 
-    try:
-      filesize = utils.get_filesize(filename)
-    except OSError:
-      filesize = 0
-    
-    if filesize > maxBytes:
-      utils.try_remove(filename + ".{0}".format(bacCount))
+    if self.maxBytes and self.backupCount and self._counter + s_len > self.maxBytes:
+      self.try_remove(self.filename + ".{0}".format(self.backupCount))
 
-      for i in range(bacCount - 1, 0, -1):
-        if i < bacCount:
-          try:
-            os.rename(
-              filename + ".{0}".format(i),
-              filename + ".{0}".format(i + 1),
-            )
-          except OSError:
-            pass
-      
-      utils.try_rename(filename, filename + ".1")
+      for i in range(self.backupCount - 1, 0, -1):
+        if i < self.backupCount:
+          self.try_rename(self.filename + ".{0}".format(i), self.filename + ".{0}".format(i + 1))
 
-    with open(filename, "a") as f:
+      self.try_rename(self.filename, self.filename + ".1")
+      self._counter = 0
+
+    with open(self.filename, "a") as f:
       f.write(record + "\n")
-    gc.collect()
 
+    self._counter += s_len
+
+  def try_remove(self, fn: str) -> None:
+    try:
+      os.remove(fn)
+    except OSError:
+      pass
+
+  def get_filesize(self, fn: str) -> int:
+    try:
+      return os.stat(fn)[6]
+    except OSError:
+      return 0
+
+  def try_rename(fn: str) -> None:
+    try:
+      os.rename(fn)
+    except OSError:
+      pass

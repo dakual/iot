@@ -1,7 +1,7 @@
-class accel():
+class Accelerator():
 
     def __init__(self, i2c, addr=0x68):
-        self.iic = i2c
+        self.iic  = i2c
         self.addr = addr
         self.iic.writeto(self.addr, bytearray([107, 0]))
 
@@ -47,3 +47,11 @@ class accel():
             if all(abs(v1[key] - v2[key]) < threshold for key in v1.keys()):
                 return v1  # Calibrated.
 
+    def getData(self):
+        accVal = self.get_values()
+        xValue = accVal["x"] + 2
+        yValue = accVal["y"] + 2
+        zValue = accVal["z"] + 2
+
+        total  = xValue * yValue * zValue
+        return round(total * 10000)

@@ -4,17 +4,21 @@ from machine import Timer
 from machine import SDCard
 from machine import RTC
 from machine import idle
+from machine import I2C
+from seismic import Seismograph
+from mpu6050 import Accelerator
 import network
 import ntptime
 import json
 import secrets
-import gc
 import os
 import time
-import seismic
+import gc
 
 tmr = Timer(0)
-ses = seismic.Seismograph()
+i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
+mpu = Accelerator(i2c)
+ses = Seismograph(mpu)
 
 
 def initWIFI():
@@ -56,7 +60,7 @@ def initSD():
 
 def rtm(timer, websocket):
   dict = {} 
-  dict['value'] = ses.getData()
+  dict['value'] = ses.getValue()
   dict['date']  = "2023"
   websocket.SendText(json.dumps(dict))
 
@@ -69,7 +73,6 @@ def _acceptWebSocketCallback(webSocket, httpClient):
 def _closedCallback(webSocket):
   print("Cliend disconnected!")
   tmr.deinit()
-  gc.collect()
 
 
 if __name__ == "__main__":
@@ -81,9 +84,15 @@ if __name__ == "__main__":
   print("Starting seismic sensor")
   ses.start()
 
-  print("Starting web server")
-  srv = MicroWebSrv(webPath='www/')
-  srv.MaxWebSocketRecvLen = 256
-  srv.WebSocketThreaded = True
-  srv.AcceptWebSocketCallback = _acceptWebSocketCallback
-  srv.Start()
+  # if 'sd' in os.listdir('/'):
+  #   print("Starting seismic logger")
+  #   logger = seismic.Logger("/sd/seismic.log", 5242880, 10)
+  #   log.init(period=10, callback=lambda timer: logger.run())
+
+  # print("Starting web server")
+  # srv = MicroWebSrv(webPath='www/')
+  # srv.MaxWebSocketRecvLen = 64
+  # srv.WebSocketThreaded = True
+  # srv.AcceptWebSocketCallback = _acceptWebSocketCallback
+  # srv.Start()
+
