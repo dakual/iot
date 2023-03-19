@@ -4,31 +4,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Real Time Seismic Monitor</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
-    <link href="//mincss.com/entireframework.min.css" rel="stylesheet" type="text/css" />
-    <link href="/css/app.css" rel="stylesheet" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Seismic Monitor</title>
   </head>
   <body>
-    <script type="text/javascript" src="/js/app.js"></script>
 
-    <nav class="nav" tabindex="-1" onclick="this.focus()">
-      <div class="container">
-        <a class="pagename current" href="#">Seismograph</a>
+    
+    <form action="/save" method="post">
+      <div class="form-group">
+        <label for="f1">Text Field</label> 
+        <input id="f1" name="f1" type="text" class="form-control">
       </div>
-    </nav>
-    <button class="btn-close btn btn-sm">×</button>
-    <div class="container">
-      <div class="hero">
-        <h1>Real Time Monitor</h1>
-        <div class="chart-container">
-          <canvas id="myChart" width="1000" height="600"></canvas>
-        </div>
+      <div class="form-group">
+        <label for="f2">Text Field</label> 
+        <input id="f2" name="f2" type="text" class="form-control">
       </div>
-    </div>
+      <div class="form-group">
+        <label for="f3">Text Field</label> 
+        <input id="f3" name="f3" type="text" class="form-control">
+      </div> 
+      <div class="form-group">
+        <button name="submit" type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+
+
   </body>
 </html>
 
