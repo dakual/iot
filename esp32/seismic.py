@@ -10,10 +10,8 @@ import gc
 class Seismograph():
   calibrationSampleSize = 1000
   calibrationAvarage    = 0
-  alarmThreshold        = 30
-  alarmPercentage       = 2
-  alarmSampleSize       = 100
   alarmState            = 0
+  cnf                   = {"ALARM": {"threshold": 30, "average": 2, "samples": 100}}
   
   def __init__(self, accelerator, config):
     self.tmr    = Timer(1)
@@ -25,16 +23,16 @@ class Seismograph():
   def run(self):
     samples = 0
     counter = 0
-    minVal  = self.calibrationAvarage - round((self.calibrationAvarage * self.alarmPercentage) / 100)
-    maxVal  = self.calibrationAvarage + round((self.calibrationAvarage * self.alarmPercentage) / 100)
+    minVal  = self.calibrationAvarage - round((self.calibrationAvarage * self.cnf.ALARM["average"]) / 100)
+    maxVal  = self.calibrationAvarage + round((self.calibrationAvarage * self.cnf.ALARM["average"]) / 100)
     
     while True:
       self.value = self.acc.getData()
       counter += 1 if self.value < minVal or self.value > maxVal else 0
       samples += 1
 
-      if samples >= self.alarmSampleSize:
-        if(counter >= self.alarmThreshold):
+      if samples >= self.cnf.ALARM["samples"]:
+        if(counter >= self.cnf.ALARM["threshold"]):
           self.alarm(1)
           self.alarmState=1
         else:
@@ -64,7 +62,8 @@ class Seismograph():
       print("Alarm active!")
       if self.alarmState == 0:
         self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
-        asyncio.run(telegram.telegram_send("[ALARM] active", self.cnf))
+        if self.cnf.ALARM["telegram"] == 1:
+          asyncio.run(telegram.telegram_send("[ALARM] active", self.cnf))
     else:
       print("Alarm inactive")
       self.tmr.deinit()
