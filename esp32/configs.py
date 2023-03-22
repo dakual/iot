@@ -7,6 +7,7 @@ class Configs():
     with open(config) as conf:
       for k, v in json.load(conf).items():
         setattr(self, k, v)
+    print("Settings:", self.ALARM)
   
   def update(self, newConfig):
     try:

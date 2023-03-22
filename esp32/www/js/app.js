@@ -55,7 +55,7 @@ $(document).ready(function () {
 
   
   const MAX_DATA_COUNT = 600;
-  const socket = new WebSocket('ws://' + location.host);
+  const socket = new WebSocket('ws://' + location.host + '/ws');
   socket.addEventListener('message', msg => {
     const data  = JSON.parse(msg.data);
     sensorValue = data.value;

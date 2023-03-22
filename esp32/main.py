@@ -1,24 +1,26 @@
 from _thread import start_new_thread
 from machine import Pin
-# from machine import SDCard
-# from machine import RTC
 from machine import idle
 from machine import I2C
 from machine import Timer
 from machine import reset
-from seismic import Seismograph
+from machine import freq
+# from machine import SDCard
+# from machine import RTC
 # from seismic import Logger
+from seismic import Seismograph
 from mpu6050 import Accelerator
 from configs import Configs
 from time import sleep
-import network
-from microdot import Microdot, Response
+from microdot import Microdot, Response, Request
 from microdot_utemplate import render_template
 # import ntptime
+import network
 import gc
-import sys
 
-tmr = Timer(0)
+freq(240000000)
+
+# tmr = Timer(0)
 i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
 cnf = Configs()
 mpu = Accelerator(i2c)
@@ -26,7 +28,7 @@ ses = Seismograph(mpu, cnf)
 app = Microdot()
 
 Response.default_content_type = 'text/html'
-
+Request.socket_read_timeout   = None
 
 
 def initWIFI():
@@ -39,14 +41,21 @@ def initWIFI():
       idle()
 
   print('Connected. IP Address:', wlan.ifconfig()[0])
-  led = Pin(33, Pin.OUT)
+  Pin(33, Pin.OUT, value=1)
 
+def reboot():
+    print("Resetting...")
+    sleep(3)
+    reset()
 
-@app.route('/')
-def hello(request):
+@app.get('/')
+def index(request):
+  return '<h1>Hello, World!</h1>', 200, {'Content-Type': 'text/html'}
+
+@app.route('/settings')
+def settings(request):
   gc.collect()
   return render_template('index.html', args=cnf.ALARM)
-
 
 @app.route('/save', methods=['POST'])
 def save(request):
@@ -65,8 +74,7 @@ def save(request):
   } 
 
   cnf.update(config)
-  tmr.init(period=3000, callback=lambda t: reset())
-
+  start_new_thread(reboot, ())
   return "OK", 200, {'Content-Type': 'text/html'}
 
 
@@ -76,12 +84,9 @@ if __name__ == "__main__":
   initWIFI()
   # initRTC()
   # initSD()
-  print("Settings:", cnf.ALARM)
 
   print("Starting seismic sensor")
   start_new_thread(ses.run, ())
 
-
   print("Starting web server")
   app.run(port=80)
-

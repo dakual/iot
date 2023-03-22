@@ -1,5 +1,5 @@
-from time import sleep
-from machine import Pin
+from time import sleep, ticks_ms
+from machine import Pin, PWM
 from machine import Timer
 import uasyncio as asyncio
 # from machine import RTC
@@ -12,12 +12,15 @@ class Seismograph():
   calibrationAvarage    = 0
   alarmState            = 0
   cnf                   = {"ALARM": {"threshold": 30, "average": 2, "samples": 100}}
+  light                 = Pin(4, Pin.OUT, value=0)
+  buzzer                = PWM(Pin(16))
   
   def __init__(self, accelerator, config):
     self.tmr    = Timer(1)
     # self.logger = Logger("/sd/seismic.log", 5242880, 10)
     self.acc    = accelerator
     self.cnf    = config
+    self.buzzer.duty_u16(0)
     self.calibrate()
 
   def run(self):
@@ -27,6 +30,9 @@ class Seismograph():
     maxVal  = self.calibrationAvarage + round((self.calibrationAvarage * self.cnf.ALARM["average"]) / 100)
     
     while True:
+      # if ticks_ms() - timestamp_acc > 100:
+      #     timestamp_acc = ticks_ms()
+
       self.value = self.acc.getData()
       counter += 1 if self.value < minVal or self.value > maxVal else 0
       samples += 1
@@ -61,21 +67,29 @@ class Seismograph():
     if state == 1:
       print("Alarm active!")
       if self.alarmState == 0:
-        self.tmr.init(period=100, callback=lambda timer: Seismograph.flashlight())
+        self.tmr.init(period=100, mode=Timer.PERIODIC, callback=lambda t: Seismograph.flashlight())
         if self.cnf.ALARM["telegram"] == 1:
           asyncio.run(telegram.telegram_send("[ALARM] active", self.cnf))
     else:
       print("Alarm inactive")
       self.tmr.deinit()
+      self.buzzer.duty_u16(0)
+      self.light.value(0)
  
   @staticmethod
   def flashlight():
-    led = Pin(4, Pin.OUT, value=1)
-    sleep(0.01)
-    led.value(0)
+    Seismograph.light.value(1)
+    Seismograph.buzzer.duty_u16(9000)
+    Seismograph.buzzer.freq(659)
+    sleep(0.02)
+    Seismograph.light.value(0)
+    Seismograph.buzzer.duty_u16(9000)
+    Seismograph.buzzer.freq(831)
 
   def getValue(self):
     return self.value
+
+
 
 
 # class Logger():

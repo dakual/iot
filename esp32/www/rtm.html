@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Real Time Seismic Monitor</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js" integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <link href="//mincss.com/entireframework.min.css" rel="stylesheet" type="text/css" />
+    <style>
+    .hero {
+      background: #eee;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 1em;
+    }
+
+    .hero h1 {
+      margin-top: 0;
+      margin-bottom: 0.3em;
+      text-align: center;
+    }
+
+
+    .chart-container {
+    max-width: 800px;
+    margin: 0 auto;
+    }
+    </style>
+  </head>
+  <body>
+
+    <nav class="nav" tabindex="-1" onclick="this.focus()">
+      <div class="container">
+        <a class="pagename current" href="#">Seismograph</a>
+      </div>
+    </nav>
+    <button class="btn-close btn btn-sm">×</button>
+    <div class="container">
+      <div class="hero">
+        <h1>Real Time Monitor</h1>
+        <div class="chart-container">
+          <canvas id="myChart" width="1000" height="600"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    $(document).ready(function () {
+      const ctx = document.getElementById("myChart").getContext("2d");
+      var sensorValue = 0
+
+      const myChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          datasets: [{ label: "Sensor 1", pointRadius: 0, }],
+        },
+        options: {
+          animation: false,
+          borderWidth: 1,
+          borderColor: ['rgba(255, 99, 132, 1)',],
+          scales: {
+            xAxis: {
+              display: false,
+            },
+            yAxis: {
+              display: true,
+              max: (scale) => (
+                scale.chart.data.datasets.reduce((acc, curr) => {
+                  var max = 0
+                  if (Array.isArray(curr.data)) {
+                    max = Math.max(...curr.data) + 20000;
+                  }
+                  return max;
+                }, Number.MIN_SAFE_INTEGER)),
+              min: (scale) => (
+                scale.chart.data.datasets.reduce((acc, curr) => {
+                  var min = 0
+                  if (Array.isArray(curr.data)) {
+                    min = Math.min(...curr.data) - 20000;
+                  }
+                  return min;
+                }, Number.MIN_SAFE_INTEGER))
+          }
+          }
+        },
+      });
+
+      function addData(label, data) {
+        myChart.data.labels.push(label);
+        myChart.data.datasets.forEach((dataset) => {
+          dataset.data.push(data);
+        });
+        myChart.update();
+      }
+
+      function removeFirstData() {
+        myChart.data.labels.splice(0, 1);
+        myChart.data.datasets.forEach((dataset) => {
+          dataset.data.shift();
+        });
+      }
+
+      
+      const MAX_DATA_COUNT = 600;
+      const socket = new WebSocket('ws://' + location.host + '/ws');
+      // Connection opened
+      socket.addEventListener("open", (event) => {
+        socket.send("Hello Server!");
+        console.log('<<< connected');
+      });
+      // On message
+      socket.addEventListener('message', msg => {
+        const data  = JSON.parse(msg.data);
+        sensorValue = data.value;
+        console.log("Received sensorData :: " + data.value);
+
+        if (myChart.data.labels.length > MAX_DATA_COUNT) {
+          removeFirstData();
+        }
+        addData(data.date, data.value);
+      });
+      // on close
+      socket.addEventListener('close', ev => {
+        console.log('<<< closed');
+      });
+    });
+    </script>
+  </body>
+</html>
