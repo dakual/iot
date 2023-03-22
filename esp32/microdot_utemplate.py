@@ -3,7 +3,7 @@ from utemplate import recompile
 _loader = None
 
 
-def init_templates(template_dir='templates', loader_class=recompile.Loader):
+def init_templates(template_dir='www', loader_class=recompile.Loader):
     """Initialize the templating subsystem.
 
     :param template_dir: the directory where templates are stored. This

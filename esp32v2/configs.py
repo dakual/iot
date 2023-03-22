@@ -7,13 +7,14 @@ class Configs():
     with open(config) as conf:
       for k, v in json.load(conf).items():
         setattr(self, k, v)
+    print("Settings:", self.ALARM)
   
   def update(self, newConfig):
     try:
       with open(self.configFile) as conf:
         data = json.load(conf)
       data.update(newConfig)
-      with open(self.configFile, "w") as conf:
+      with open(self.configFile, "w+") as conf:
         json.dump(data, conf)
     except Exception as ex:
       print("Config update error: ", ex)

@@ -2,21 +2,16 @@ from _thread import start_new_thread
 from machine import Pin
 from machine import idle
 from machine import I2C
-from machine import Timer
 from machine import reset
 from machine import freq
-# from machine import SDCard
-# from machine import RTC
-# from seismic import Logger
 from seismic import Seismograph
 from mpu6050 import Accelerator
 from configs import Configs
 from time import sleep
-from microdot import Microdot, Response, Request
-from microdot_utemplate import render_template
-# import ntptime
+from microWebSrv import MicroWebSrv
 import network
 import gc
+
 
 freq(240000000)
 
@@ -25,10 +20,7 @@ i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
 cnf = Configs()
 mpu = Accelerator(i2c)
 ses = Seismograph(mpu, cnf)
-app = Microdot()
 
-Response.default_content_type = 'text/html'
-Request.socket_read_timeout   = None
 
 
 def initWIFI():
@@ -44,26 +36,22 @@ def initWIFI():
   Pin(33, Pin.OUT, value=1)
 
 def reboot():
-  print("Resetting...")
-  sleep(3)
-  reset()
+    print("Resetting...")
+    sleep(3)
+    reset()
 
-@app.get('/')
-def index(request):
-  gc.collect()
-  return '<h1>Hello, World!</h1>', 200, {'Content-Type': 'text/html'}
 
-@app.route('/settings')
-def settings(request):
-  gc.collect()
-  return render_template('settings.html', args=cnf.ALARM)
+@MicroWebSrv.route('/settings')
+def index(httpClient, httpResponse) :
+	httpResponse.WriteResponsePyHTMLFile("www/test.pyhtml", vars=cnf.ALARM)
 
-@app.route('/save', methods=['POST'])
-def save(request):
-  alarm_threshold = request.form["alarm_threshold"]
-  alarm_average   = request.form["alarm_average"]
-  alarm_samples   = request.form["alarm_samples"]
-  alarm_telegram  = request.form["alarm_telegram"]
+@MicroWebSrv.route('/save', 'POST')
+def _httpHandlerTestPost(httpClient, httpResponse):
+  formData        = httpClient.ReadRequestPostedFormData()
+  alarm_threshold = formData["alarm_threshold"]
+  alarm_average   = formData["alarm_average"]
+  alarm_samples   = formData["alarm_samples"]
+  alarm_telegram  = formData["alarm_telegram"]
   
   config = { 
     "ALARM" : {
@@ -75,19 +63,27 @@ def save(request):
   } 
 
   cnf.update(config)
-  start_new_thread(reboot, ())
-  return "OK", 200, {'Content-Type': 'text/html'}
+  #start_new_thread(reboot, ())
 
+  httpResponse.WriteResponseOk(
+      headers        = None,
+      contentType	   = "text/html",
+      contentCharset = "UTF-8",
+      content 		   = "OK"
+  )
 
+  print("Resetting...")
+  sleep(1)
+  reset()
 
 if __name__ == "__main__":
   print("initializing...")
   initWIFI()
-  # initRTC()
-  # initSD()
 
   print("Starting seismic sensor")
   start_new_thread(ses.run, ())
 
   print("Starting web server")
-  app.run(port=80)
+  routeHandlers = [ ( "/", "GET",  index ) ] # routeHandlers=routeHandlers, 
+  srv = MicroWebSrv(webPath='www/')
+  srv.Start(threaded=True)
