@@ -43,14 +43,10 @@ def initWIFI():
   print('Connected. IP Address:', wlan.ifconfig()[0])
   Pin(33, Pin.OUT, value=1)
 
-def reboot():
-  print("Resetting...")
-  sleep(3)
-  reset()
-
 @app.get('/')
 def index(request):
   gc.collect()
+  print(cnf.ALARM)
   return '<h1>Hello, World!</h1>', 200, {'Content-Type': 'text/html'}
 
 @app.route('/settings')
@@ -60,22 +56,25 @@ def settings(request):
 
 @app.route('/save', methods=['POST'])
 def save(request):
-  alarm_threshold = request.form["alarm_threshold"]
-  alarm_average   = request.form["alarm_average"]
-  alarm_samples   = request.form["alarm_samples"]
-  alarm_telegram  = request.form["alarm_telegram"]
+  alarm_threshold  = request.form["alarm_threshold"]
+  alarm_average    = request.form["alarm_average"]
+  alarm_samples    = request.form["alarm_samples"]
+  alarm_telegram   = request.form["alarm_telegram"]
+  alarm_flashlight = request.form["alarm_flashlight"]
+  alarm_sound      = request.form["alarm_sound"]
   
   config = { 
     "ALARM" : {
       "threshold": int(alarm_threshold), 
       "average": float(alarm_average), 
       "samples": int(alarm_samples),
-      "telegram": int(alarm_telegram)
+      "telegram": int(alarm_telegram),
+      "flashlight": int(alarm_flashlight),
+      "sound": int(alarm_sound)
     }
-  } 
-
+  }
   cnf.update(config)
-  start_new_thread(reboot, ())
+
   return "OK", 200, {'Content-Type': 'text/html'}
 
 

@@ -12,7 +12,9 @@ class Configs():
     try:
       with open(self.configFile) as conf:
         data = json.load(conf)
-      data.update(newConfig)
+        data.update(newConfig)
+        for k, v in data.items():
+          setattr(self, k, v)
       with open(self.configFile, "w") as conf:
         json.dump(data, conf)
     except Exception as ex:

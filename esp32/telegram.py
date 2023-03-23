@@ -1,6 +1,6 @@
 import urequests
 
-async def telegram_send(text, cnf):
+def telegram_send(text, cnf):
   url  = 'https://api.telegram.org/bot' + cnf.TELEGRAM["token"]
   data = {'chat_id': cnf.TELEGRAM["chatid"] , 'text': text}
   try:

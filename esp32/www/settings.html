@@ -17,15 +17,15 @@
           <form action="/save" method="post">
             <div class="form-group">
               <label for="alarm_threshold">Alarm threshold</label> 
-              <input id="alarm_threshold" name="alarm_threshold" type="number" class="form-control" value="{% if args['threshold'] %}{{ args['threshold'] }}{% endif %}">
+              <input id="alarm_threshold" name="alarm_threshold" type="number" class="form-control" value="{% if 'threshold' in args %}{{ args['threshold'] }}{% endif %}">
             </div>
             <div class="form-group">
               <label for="alarm_average">Alarm average</label> 
-              <input id="alarm_average" name="alarm_average" type="number" class="form-control" value="{% if args['average'] %}{{ args['average'] }}{% endif %}">
+              <input id="alarm_average" name="alarm_average" type="number" class="form-control" value="{% if 'average' in args %}{{ args['average'] }}{% endif %}">
             </div>
             <div class="form-group">
               <label for="alarm_samples">Alarm samples</label> 
-              <input id="alarm_samples" name="alarm_samples" type="number" class="form-control" value="{% if args['samples'] %}{{ args['samples'] }}{% endif %}">
+              <input id="alarm_samples" name="alarm_samples" type="number" class="form-control" value="{% if 'samples' in args %}{{ args['samples'] }}{% endif %}">
             </div> 
             <div class="form-group">
               <label for="alarm_telegram">Telegram</label> 
@@ -60,11 +60,11 @@
           <form action="/save" method="post">
             <div class="form-group">
               <label for="telegram_token">Token</label> 
-              <input id="telegram_token" name="telegram_token" type="number" class="form-control" value="{% if args['token'] %}{{ args['token'] }}{% endif %}">
+              <input id="telegram_token" name="telegram_token" type="number" class="form-control" value="{% if 'token' in args %}{{ args['token'] }}{% endif %}">
             </div>
             <div class="form-group">
               <label for="telegram_chatid">Chat Id</label> 
-              <input id="telegram_chatid" name="telegram_chatid" type="number" class="form-control" value="{% if args['chatid'] %}{{ args['chatid'] }}{% endif %}">
+              <input id="telegram_chatid" name="telegram_chatid" type="number" class="form-control" value="{% if 'chatid' in args %}{{ args['chatid'] }}{% endif %}">
             </div>
             <div class="form-group">
               <button name="submit" type="submit" class="btn btn-primary">Submit</button>
@@ -78,11 +78,11 @@
           <form action="/save" method="post">
             <div class="form-group">
               <label for="wifi_ssid">SSID</label> 
-              <input id="wifi_ssid" name="wifi_ssid" type="number" class="form-control" value="{% if args['ssid'] %}{{ args['ssid'] }}{% endif %}">
+              <input id="wifi_ssid" name="wifi_ssid" type="number" class="form-control" value="{% if 'ssid' in args %}{{ args['ssid'] }}{% endif %}">
             </div>
             <div class="form-group">
               <label for="wifi_password">Password</label> 
-              <input id="wifi_password" name="wifi_password" type="number" class="form-control" value="{% if args['password'] %}{{ args['password'] }}{% endif %}">
+              <input id="wifi_password" name="wifi_password" type="number" class="form-control" value="{% if 'password' in args %}{{ args['password'] }}{% endif %}">
             </div>
             <div class="form-group">
               <button name="submit" type="submit" class="btn btn-primary">Submit</button>
