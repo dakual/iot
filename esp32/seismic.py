@@ -9,8 +9,7 @@ import gc
 
 tmr    = Timer(1)
 light  = Pin(4, Pin.OUT, value=0)
-buzzer = PWM(Pin(16))
-buzzer.duty(0)
+buzzer = PWM(Pin(16), freq=1, duty=0)
 
 
 class Seismograph():

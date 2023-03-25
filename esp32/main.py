@@ -1,5 +1,6 @@
 from _thread import start_new_thread
 from machine import Pin
+from machine import PWM
 from machine import idle
 from machine import I2C
 from machine import Timer
