@@ -1,7 +1,7 @@
 from time import sleep, ticks_ms
 from machine import Pin, PWM
 from machine import Timer
-import uasyncio as asyncio
+# import uasyncio as asyncio
 # from machine import RTC
 from telegram import telegram_send
 # import os
@@ -27,11 +27,9 @@ class Seismograph():
   def run(self):
     samples = 0
     counter = 0
+    timestamp_acc = 0
     
     while True:
-      # if ticks_ms() - timestamp_acc > 100:
-      #     timestamp_acc = ticks_ms()
-
       self.value = self.acc.getData()
       minVal     = self.calibrationAvarage - round((self.calibrationAvarage * self.cnf.ALARM["average"]) / 100)
       maxVal     = self.calibrationAvarage + round((self.calibrationAvarage * self.cnf.ALARM["average"]) / 100)
@@ -50,9 +48,13 @@ class Seismograph():
         samples = 0
         counter = 0
 
-      # self.logger.emit(self.value)
-      # gc.collect()
-      sleep(0.01)
+      if ticks_ms() - timestamp_acc > (10 * 6000):
+        timestamp_acc = ticks_ms()
+        if self.alarmState != 1:
+          gc.collect()
+          self.calibrate()
+      else:
+        sleep(0.01)
 
   def calibrate(self):
     for num in range(0, self.calibrationSampleSize):
